@@ -191,6 +191,34 @@
   .selectrow{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
   .field select{width:100%;font-size:15px;border:1px solid var(--line);border-radius:10px;padding:11px 12px;outline:none;background:#fff;-webkit-appearance:none;appearance:none}
   .field textarea{width:100%;font-size:14px;border:1px solid var(--line);border-radius:10px;padding:11px 12px;outline:none;min-height:90px;font-family:inherit;resize:vertical}
+
+  /* ===== Director plan ===== */
+  .planhero{background:linear-gradient(135deg,#1f2a44,#33457a);color:#eef1fe;border-radius:16px;padding:16px 17px;box-shadow:var(--shadow);margin:6px 0 14px}
+  .planhero .pt{font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.72}
+  .planhero h2{font-size:19px;margin:4px 0 6px;font-weight:700}
+  .planhero p{font-size:13.5px;line-height:1.5;opacity:.92;margin:0}
+  .progwrap{margin-top:12px}
+  .progbar{height:8px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden}
+  .progbar > i{display:block;height:100%;background:#7bed9f;border-radius:999px;transition:width .3s}
+  .proglbl{font-size:11.5px;opacity:.85;margin-top:6px}
+  .areacard{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:14px 15px;margin-bottom:10px}
+  .areacard .at{font-size:15px;font-weight:650;display:flex;align-items:center;gap:8px}
+  .areacard .aw{font-size:12.5px;color:var(--muted);margin:4px 0 8px;line-height:1.45}
+  .ms{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--line);cursor:pointer}
+  .ms:first-of-type{border-top:none}
+  .ms .box{width:20px;height:20px;border-radius:6px;border:2px solid var(--gray);flex:0 0 auto;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:.12s}
+  .ms.on .box{background:var(--green);border-color:var(--green)}
+  .ms .box svg{width:12px;height:12px;opacity:0}.ms.on .box svg{opacity:1}
+  .ms .mt{font-size:13.5px;line-height:1.4}
+  .ms.on .mt{color:var(--muted);text-decoration:line-through}
+  .scorecard{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:14px 15px;margin-bottom:10px}
+  .scorecard h3{font-size:15px;margin:0 0 3px;font-weight:650}
+  .scorecard .sd{font-size:12.5px;color:var(--muted);margin-bottom:8px}
+  .metric{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+  .metric:first-of-type{border-top:none}
+  .metric label{font-size:13px;flex:1}
+  .metric input{width:120px;font-size:14px;border:1px solid var(--line);border-radius:9px;padding:8px 10px;outline:none;text-align:right}
+  .metric input:focus{border-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -206,6 +234,7 @@
       <div class="date" id="date">—</div>
     </div>
     <div style="display:flex;gap:8px;align-items:center">
+      <button class="syncbtn" id="planBtn" title="Director plan">🎯&nbsp;Plan</button>
       <button class="syncbtn" id="tplBtn" title="Email templates">✉️&nbsp;Templates</button>
       <button class="syncbtn local" id="syncBtn" title="Sync"><span class="d"></span><span id="syncLbl">Local</span></button>
     </div>
@@ -240,6 +269,8 @@
     </div>
     <div id="templatesList"></div>
   </div>
+
+  <div id="planView" style="display:none"></div>
 
   <section class="live" id="liveWrap" style="display:none">
     <h3>Live feeds — desktop</h3>
@@ -289,10 +320,12 @@
 var SAVE_KEY = "jcc_tasks_v1";
 var ORD_KEY  = "jcc_orders_v1";
 var TPL_KEY  = "jcc_tpl_v1";
+var PLAN_KEY = "jcc_plan_v1";
 var GH_KEY   = "jcc_gh_v1";
 var TASKS = [];                 // {id,title,notes,due,priority,done,created,updated,deleted,source}
 var ORDERS = [];                // {id,customer,item,qty,status,notes,updated,created,deleted}
 var TEMPLATES = [];             // {id,name,icon,subject,body}
+var PLAN = {checks:{},metrics:{},updated:""};  // Director plan progress (synced)
 var VIEW = "today";
 var PRIO = "med";
 var GH = loadGH();              // keys are defined above so this reads correctly
@@ -334,11 +367,14 @@ function b64decode(b64){return decodeURIComponent(escape(atob(b64)));}
 function loadLocal(){
   try{TASKS=JSON.parse(localStorage.getItem(SAVE_KEY))||[];}catch(e){TASKS=[];}
   try{ORDERS=JSON.parse(localStorage.getItem(ORD_KEY))||[];}catch(e){ORDERS=[];}
+  try{PLAN=JSON.parse(localStorage.getItem(PLAN_KEY))||{checks:{},metrics:{},updated:""};}catch(e){PLAN={checks:{},metrics:{},updated:""};}
+  if(!PLAN.checks)PLAN.checks={}; if(!PLAN.metrics)PLAN.metrics={};
   loadTemplates();
 }
 function saveLocal(){
   try{localStorage.setItem(SAVE_KEY,JSON.stringify(TASKS));}catch(e){}
   try{localStorage.setItem(ORD_KEY,JSON.stringify(ORDERS));}catch(e){}
+  try{localStorage.setItem(PLAN_KEY,JSON.stringify(PLAN));}catch(e){}
 }
 function loadGH(){try{return JSON.parse(localStorage.getItem(GH_KEY))||null;}catch(e){return null;}}
 function saveGH(g){GH=g;localStorage.setItem(GH_KEY,JSON.stringify(g));}
@@ -372,16 +408,17 @@ async function pullRemote(){
   if(!r.ok) throw new Error("pull "+r.status);
   var j=await r.json();
   REMOTE_SHA=j.sha;
-  try{var d=JSON.parse(b64decode(j.content)); return {tasks:d.tasks||[], orders:d.orders||[]};}catch(e){return {tasks:[],orders:[]};}
+  try{var d=JSON.parse(b64decode(j.content)); return {tasks:d.tasks||[], orders:d.orders||[], plan:d.plan||null};}catch(e){return {tasks:[],orders:[],plan:null};}
 }
-function remotePayload(){return b64encode(JSON.stringify({tasks:TASKS,orders:ORDERS,updated:nowISO()},null,2));}
+function mergePlan(remotePlan){ if(remotePlan && (!PLAN.updated || (remotePlan.updated||"")>PLAN.updated)){ PLAN=remotePlan; if(!PLAN.checks)PLAN.checks={}; if(!PLAN.metrics)PLAN.metrics={}; } }
+function remotePayload(){return b64encode(JSON.stringify({tasks:TASKS,orders:ORDERS,plan:PLAN,updated:nowISO()},null,2));}
 async function pushRemote(){
   if(!GH) return;
   var body={message:"Update "+new Date().toISOString(),content:remotePayload(),branch:GH.branch||"main"};
   if(REMOTE_SHA) body.sha=REMOTE_SHA;
   var r=await fetch(ghURL(),{method:"PUT",headers:ghHeaders(),body:JSON.stringify(body)});
   if(r.status===409){ // sha conflict: re-pull, merge, retry once
-    var remote=await pullRemote(); TASKS=mergeTasks(TASKS,remote.tasks); ORDERS=mergeTasks(ORDERS,remote.orders); saveLocal();
+    var remote=await pullRemote(); TASKS=mergeTasks(TASKS,remote.tasks); ORDERS=mergeTasks(ORDERS,remote.orders); mergePlan(remote.plan); saveLocal();
     body.content=remotePayload(); body.sha=REMOTE_SHA;
     r=await fetch(ghURL(),{method:"PUT",headers:ghHeaders(),body:JSON.stringify(body)});
   }
@@ -393,7 +430,7 @@ async function fullSync(){
   try{
     setSync("busy","Syncing…");
     var remote=await pullRemote();
-    TASKS=mergeTasks(TASKS,remote.tasks); ORDERS=mergeTasks(ORDERS,remote.orders); saveLocal(); render();
+    TASKS=mergeTasks(TASKS,remote.tasks); ORDERS=mergeTasks(ORDERS,remote.orders); mergePlan(remote.plan); saveLocal(); render();
     await pushRemote();
     setSync("ok","Synced");
     document.getElementById("syncInfo").textContent="Connected to "+GH.owner+"/"+GH.repo+" · "+GH.path;
@@ -532,13 +569,16 @@ function bindNav(){
 }
 function render(){
   renderNav();
-  var isOrders=VIEW==="orders", isTpl=VIEW==="templates";
-  document.getElementById("tasksView").style.display=(isOrders||isTpl)?"none":"block";
+  var isOrders=VIEW==="orders", isTpl=VIEW==="templates", isPlan=VIEW==="plan";
+  document.getElementById("tasksView").style.display=(isOrders||isTpl||isPlan)?"none":"block";
   document.getElementById("ordersView").style.display=isOrders?"block":"none";
   document.getElementById("templatesView").style.display=isTpl?"block":"none";
-  var tb=document.getElementById("tplBtn"); if(tb) tb.style.background=isTpl?"var(--accent)":"", tb.style.color=isTpl?"#fff":"";
+  document.getElementById("planView").style.display=isPlan?"block":"none";
+  var tb=document.getElementById("tplBtn"); if(tb){ tb.style.background=isTpl?"var(--accent)":""; tb.style.color=isTpl?"#fff":""; }
+  var pb=document.getElementById("planBtn"); if(pb){ pb.style.background=isPlan?"var(--accent)":""; pb.style.color=isPlan?"#fff":""; }
   if(isOrders){ renderOrders(); }
   else if(isTpl){ renderTemplates(); }
+  else if(isPlan){ renderPlan(); }
   else { renderTabs(); renderList(); renderBrief(); }
 }
 
@@ -734,6 +774,55 @@ function templateForm(t){
   };
 }
 
+/* ============ Director plan ============ */
+var DIRECTOR_PLAN={
+  title:"Sr. Manager → Director",
+  intro:"The jump is mostly about doing less of the executing yourself — owning the strategy and scaling through others. Track the behaviors that build the case.",
+  areas:[
+    {id:"scale",icon:"⚙️",title:"Scale through systems, not yourself",why:"~Half your activity is hands-on coordination. Director-level means the program runs without you in every thread.",
+     ms:[["s1","Templatize your top recurring emails (done — keep using them)"],["s2","Hand off the lab-logistics cadence to a coordinator/rep with a clear SOP"],["s3","Cut your personal logistics email volume ~30% this quarter"]]},
+    {id:"outcomes",icon:"📈",title:"Lead with outcomes, not activity",why:"Your story is 'what's happening.' Directors own a number.",
+     ms:[["o1","Build an impact scorecard (below) and keep it current"],["o2","Bring outcome metrics — not activity — to your next 1:1 and review"],["o3","Tie med-ed outcomes to the pipeline/launch results leadership cares about"]]},
+    {id:"launch",icon:"🚀",title:"Own ENT med-ed launch strategy",why:"Your launch leadership roughly doubled this year — your strongest promotable scope.",
+     ms:[["l1","Get named as owner of med-ed launch strategy (not coordinator)"],["l2","Present an AXiS/Stealth launch-readiness plan to leadership"],["l3","Document the launch shift in your performance narrative"]]},
+    {id:"friction",icon:"🛠️",title:"Fix systemic friction, don't chase it",why:"Approvals & dependencies stall every quarter — solve the system, not the instance.",
+     ms:[["f1","Stand up a weekly approvals/dependency follow-up sweep"],["f2","Propose a clearer Veeva approval cadence/ownership to marketing"],["f3","Move physical orders into the tracked Orders pipeline"]]},
+    {id:"upout",icon:"🧭",title:"Spend time up and out",why:"More strategic POV upward, more visibility, more developing others.",
+     ms:[["u1","Bring one strategic POV (not status) to leadership each month"],["u2","Build relationships with the people who decide promotions"],["u3","Formally mentor or develop at least one person"]]}
+  ],
+  metrics:[
+    ["m_surg","Surgeons trained (YTD)"],["m_courses","Courses / labs delivered (YTD)"],["m_launch","Launches supported"],
+    ["m_nps","Course satisfaction / NPS"],["m_cycle","Avg approval cycle time"],["m_deleg","% logistics handled by others"]
+  ]
+};
+function savePlan(){ PLAN.updated=nowISO(); saveLocal(); schedulePush(); }
+function togglePlan(id){ PLAN.checks[id]=!PLAN.checks[id]; savePlan(); renderPlan(); }
+function setMetric(id,val){ PLAN.metrics[id]=val; savePlan(); }
+function renderPlan(){
+  var el=document.getElementById("planView");
+  var total=0,done=0; DIRECTOR_PLAN.areas.forEach(function(a){ a.ms.forEach(function(m){ total++; if(PLAN.checks[m[0]])done++; }); });
+  var pct=total?Math.round(done/total*100):0;
+  var html="<div class='planhero'><div class='pt'>Career plan</div><h2>"+esc(DIRECTOR_PLAN.title)+"</h2><p>"+esc(DIRECTOR_PLAN.intro)+"</p>"
+    +"<div class='progwrap'><div class='progbar'><i style='width:"+pct+"%'></i></div><div class='proglbl'>"+done+" of "+total+" milestones · "+pct+"%</div></div></div>";
+  DIRECTOR_PLAN.areas.forEach(function(a){
+    html+="<div class='areacard'><div class='at'>"+a.icon+" "+esc(a.title)+"</div><div class='aw'>"+esc(a.why)+"</div>";
+    a.ms.forEach(function(m){
+      var on=!!PLAN.checks[m[0]];
+      html+="<div class='ms "+(on?"on":"")+"' data-m='"+m[0]+"'><div class='box'><svg viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5'><path d='M5 12l5 5L20 6'/></svg></div><div class='mt'>"+esc(m[1])+"</div></div>";
+    });
+    html+="</div>";
+  });
+  html+="<div class='scorecard'><h3>📊 Impact scorecard</h3><div class='sd'>Fill these from your lab/launch numbers and bring them to your next review.</div>";
+  DIRECTOR_PLAN.metrics.forEach(function(m){
+    var v=PLAN.metrics[m[0]]?esc(PLAN.metrics[m[0]]):"";
+    html+="<div class='metric'><label>"+esc(m[1])+"</label><input data-metric='"+m[0]+"' value=\""+v+"\" placeholder='—' autocomplete='off'></div>";
+  });
+  html+="</div>";
+  el.innerHTML=html;
+  Array.prototype.forEach.call(el.querySelectorAll(".ms"),function(n){ n.onclick=function(){ togglePlan(n.getAttribute("data-m")); }; });
+  Array.prototype.forEach.call(el.querySelectorAll("[data-metric]"),function(inp){ inp.onchange=function(){ setMetric(inp.getAttribute("data-metric"), inp.value.trim()); }; });
+}
+
 /* ============ boot ============ */
 (function(){
   document.getElementById("date").textContent=new Date().toLocaleDateString([], {weekday:"long",month:"long",day:"numeric"});
@@ -753,6 +842,7 @@ function templateForm(t){
   document.getElementById("sheetBg").onclick=closeSheet;
   document.getElementById("saveSheet").onclick=saveSheet;
   document.getElementById("tplBtn").onclick=function(){VIEW="templates";window.scrollTo({top:0});render();};
+  document.getElementById("planBtn").onclick=function(){VIEW="plan";window.scrollTo({top:0});render();};
   document.getElementById("newOrderBtn").onclick=function(){orderForm(null);};
   document.getElementById("newTplBtn").onclick=function(){templateForm(null);};
   document.getElementById("ovl").onclick=closeOvl;
