@@ -112,12 +112,45 @@
   .grip{width:38px;height:4px;border-radius:999px;background:#dfe3ea;margin:0 auto 10px}
   .ssub{font-size:11.5px;color:var(--muted);margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
 
-  /* floating settings button */
-  .fab{position:fixed;right:16px;bottom:calc(18px + env(safe-area-inset-bottom));width:50px;height:50px;border-radius:50%;
-       background:var(--ink);color:#fff;border:none;font-size:20px;box-shadow:0 6px 18px rgba(16,24,40,.22);cursor:pointer;z-index:8}
+  /* floating settings button (sits above the tab bar) */
+  .fab{position:fixed;right:16px;bottom:calc(78px + env(safe-area-inset-bottom));width:48px;height:48px;border-radius:50%;
+       background:var(--ink);color:#fff;border:none;font-size:19px;box-shadow:0 6px 18px rgba(16,24,40,.22);cursor:pointer;z-index:8}
+
+  /* hide the old top tab pills — replaced by bottom tab bar */
+  .tabs{display:none !important}
+
+  /* bottom tab bar (iOS-style) */
+  .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:9;display:flex;justify-content:space-around;
+          background:rgba(255,255,255,.86);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);
+          border-top:1px solid var(--line);padding:8px 6px calc(8px + env(safe-area-inset-bottom))}
+  .tabbar button{flex:1;border:none;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;
+                 color:#9097a1;font-size:11px;font-weight:560;cursor:pointer;padding:2px 0;position:relative;-webkit-tap-highlight-color:transparent}
+  .tabbar button.active{color:var(--accent)}
+  .tabbar svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.9}
+  .tabbar .nbadge{position:absolute;top:-3px;left:calc(50% + 7px);min-width:16px;height:16px;border-radius:999px;
+                  background:var(--red);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px}
+
+  /* launch splash */
+  #splash{position:fixed;inset:0;z-index:50;background:linear-gradient(150deg,#1f2a44,#33457a);
+          display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+          transition:opacity .45s ease, visibility .45s ease}
+  #splash.hide{opacity:0;visibility:hidden}
+  #splash .mark{width:74px;height:74px;border-radius:20px;border:3px solid rgba(238,241,254,.9);
+                display:flex;align-items:center;justify-content:center}
+  #splash .mark svg{width:38px;height:38px;stroke:#eef1fe;fill:none;stroke-width:3.4}
+  #splash .nm{color:#eef1fe;font-size:17px;font-weight:650;letter-spacing:.01em}
+  #splash .sub{color:rgba(238,241,254,.6);font-size:12.5px;margin-top:-8px}
+
+  /* standalone (home-screen) feel: a touch more breathing room up top */
+  @media all and (display-mode:standalone){ .wrap{padding-top:6px} h1{font-size:23px} }
 </style>
 </head>
 <body>
+<div id="splash">
+  <div class="mark"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg></div>
+  <div class="nm">Command Center</div>
+  <div class="sub">getting your day ready…</div>
+</div>
 <div class="wrap">
   <header class="top">
     <div>
@@ -148,10 +181,14 @@
     </div>
   </section>
 
-  <div class="muted-note" id="mobileNote" style="display:none">
-    📱 On your phone this is your full task command center. Open it in the Claude desktop app to also see live email, calendar, and project feeds.
-  </div>
 </div>
+
+<nav class="tabbar" id="tabbar">
+  <button data-v="today"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5z"/></svg><span>Today</span></button>
+  <button data-v="upcoming"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg><span>Upcoming</span></button>
+  <button data-v="all"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg><span>All</span></button>
+  <button data-v="done"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>Done</span></button>
+</nav>
 
 <button class="fab" id="fab" title="Settings">⚙</button>
 
@@ -389,7 +426,25 @@ function renderBrief(){
   else txt=c.today+" due today"+(c.today>1?"":"")+", "+c.upcoming+" more this week. Tap a circle to knock them out.";
   document.getElementById("briefText").textContent=txt;
 }
-function render(){renderTabs();renderList();renderBrief();}
+function renderNav(){
+  var c=counts(), bar=document.getElementById("tabbar"); if(!bar) return;
+  Array.prototype.forEach.call(bar.querySelectorAll("button"),function(b){
+    var v=b.getAttribute("data-v");
+    b.classList.toggle("active", VIEW===v);
+    var old=b.querySelector(".nbadge"); if(old) old.remove();
+    if(v==="today" && c.today>0){
+      var s=document.createElement("span"); s.className="nbadge"; s.textContent=c.today>99?"99+":c.today;
+      b.appendChild(s);
+    }
+  });
+}
+function bindNav(){
+  var bar=document.getElementById("tabbar"); if(!bar) return;
+  Array.prototype.forEach.call(bar.querySelectorAll("button"),function(b){
+    b.onclick=function(){ VIEW=b.getAttribute("data-v"); window.scrollTo({top:0,behavior:"smooth"}); render(); };
+  });
+}
+function render(){renderTabs();renderNav();renderList();renderBrief();}
 
 /* ============ live panels (Cowork desktop only) ============ */
 async function callMcp(name,args){
@@ -467,16 +522,20 @@ function saveSheet(){
   document.getElementById("closeSheet").onclick=closeSheet;
   document.getElementById("sheetBg").onclick=closeSheet;
   document.getElementById("saveSheet").onclick=saveSheet;
+  bindNav();
 
   render();
 
   if(window.cowork&&window.cowork.callMcpTool){loadLive();}
-  else{document.getElementById("mobileNote").style.display="block";}
 
   if(GH){document.getElementById("syncInfo").textContent="Connected to "+GH.owner+"/"+GH.repo+" · "+GH.path;fullSync();}
   else{setSync("local","Local");}
 
   if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(function(){});}
+
+  // dismiss launch splash
+  var sp=document.getElementById("splash");
+  if(sp){ setTimeout(function(){sp.classList.add("hide");},700); setTimeout(function(){if(sp&&sp.parentNode)sp.parentNode.removeChild(sp);},1200); }
 })();
 </script>
 </body>
