@@ -212,14 +212,14 @@
 <script>
 "use strict";
 /* ============ state ============ */
+var SAVE_KEY = "jcc_tasks_v1";
+var GH_KEY = "jcc_gh_v1";
 var TASKS = [];                 // {id,title,notes,due,priority,done,created,updated,deleted,source}
 var VIEW = "today";
 var PRIO = "med";
-var GH = loadGH();
+var GH = loadGH();              // keys are defined above so this reads correctly
 var REMOTE_SHA = null;
 var pushTimer = null;
-var SAVE_KEY = "jcc_tasks_v1";
-var GH_KEY = "jcc_gh_v1";
 
 /* ============ utils ============ */
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
@@ -508,6 +508,7 @@ function saveSheet(){
 /* ============ boot ============ */
 (function(){
   document.getElementById("date").textContent=new Date().toLocaleDateString([], {weekday:"long",month:"long",day:"numeric"});
+  GH=loadGH();
   loadLocal();
   // prio cycle
   var cycle={high:"med",med:"low",low:"high"}, label={high:"!",med:"●",low:"○"}, color={high:"#e03131",med:"#3b5bdb",low:"#aeb4bf"};

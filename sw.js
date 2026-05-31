@@ -1,5 +1,5 @@
 /* Josh Command Center — service worker (offline shell) */
-const CACHE = "jcc-v1";
+const CACHE = "jcc-v2";
 const ASSETS = [
   "./",
   "./index.html",
@@ -27,7 +27,21 @@ self.addEventListener("fetch", (e) => {
   if (url.hostname === "api.github.com") return;
   if (e.request.method !== "GET") return;
 
-  // App shell: cache-first with background refresh.
+  // Navigations / HTML: network-first so app updates reach devices, fall back to cache offline.
+  if (e.request.mode === "navigate" || (e.request.destination === "document")) {
+    e.respondWith(
+      fetch(e.request)
+        .then((res) => {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put("./index.html", copy));
+          return res;
+        })
+        .catch(() => caches.match(e.request).then((c) => c || caches.match("./index.html")))
+    );
+    return;
+  }
+
+  // Other same-origin assets: cache-first with background refresh.
   e.respondWith(
     caches.match(e.request).then((cached) => {
       const net = fetch(e.request)
