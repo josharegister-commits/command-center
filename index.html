@@ -143,6 +143,54 @@
 
   /* standalone (home-screen) feel: a touch more breathing room up top */
   @media all and (display-mode:standalone){ .wrap{padding-top:6px} h1{font-size:23px} }
+
+  /* ===== Orders & Templates module ===== */
+  .pagehead{display:flex;align-items:center;justify-content:space-between;margin:6px 2px 12px}
+  .pagehead h2{font-size:18px;margin:0;font-weight:700;letter-spacing:-.01em}
+  .pagehead .sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .newbtn{border:none;background:var(--accent);color:#fff;font-size:13.5px;font-weight:600;border-radius:11px;padding:9px 13px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+  .newbtn.ghost{background:var(--accent-soft);color:var(--accent)}
+
+  /* order cards */
+  .ocard{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:13px 14px;margin-bottom:9px}
+  .ocard .top{display:flex;align-items:flex-start;gap:10px}
+  .ocard .cust{font-size:15px;font-weight:620;line-height:1.3}
+  .ocard .item{font-size:13.5px;color:#444;margin-top:2px}
+  .ocard .nts{font-size:12.5px;color:var(--muted);margin-top:5px;line-height:1.4}
+  .ocard .row2{display:flex;align-items:center;gap:8px;margin-top:9px;flex-wrap:wrap}
+  .ostat{font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:999px;border:none;cursor:pointer}
+  .ostat.New{background:#eef1fe;color:#3b5bdb}
+  .ostat.Submitted{background:#fff4e3;color:#b9791e}
+  .ostat.Confirmed{background:#e7f0fb;color:#2563a8}
+  .ostat.Shipped{background:#eaf6ec;color:#2f7a3a}
+  .ostat.Done{background:#eef0f2;color:#6b7280}
+  .ocard .qty{font-size:12px;color:var(--muted);background:#f3f5f8;border-radius:999px;padding:3px 9px;font-weight:560}
+  .ocard .when{font-size:12px;color:var(--muted)}
+  .ocard .x{margin-left:auto;border:none;background:transparent;color:var(--gray);font-size:18px;cursor:pointer;line-height:1}
+  .ocard .adv{font-size:12px;color:var(--accent);background:none;border:none;cursor:pointer;font-weight:600}
+
+  /* template cards */
+  .tplcard{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:14px;margin-bottom:9px;cursor:pointer;transition:.12s;display:flex;align-items:center;gap:12px}
+  .tplcard:active{transform:scale(.99)}
+  .tplcard .ic{width:38px;height:38px;border-radius:11px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:18px;flex:0 0 auto}
+  .tplcard .tt{font-size:15px;font-weight:600}
+  .tplcard .pv{font-size:12.5px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70vw}
+  .tplcard .chev{margin-left:auto;color:var(--gray)}
+
+  /* compose / form overlay (reuses bottom-sheet pattern, taller) */
+  .ovl{position:fixed;inset:0;background:rgba(15,20,32,.45);display:none;z-index:32}
+  .ovl.open{display:block}
+  .osheet{position:fixed;left:0;right:0;bottom:0;background:#fff;border-radius:20px 20px 0 0;z-index:33;
+          transform:translateY(100%);transition:.22s;max-height:94vh;overflow:auto;
+          padding:16px 18px calc(24px + env(safe-area-inset-bottom))}
+  .osheet.open{transform:translateY(0)}
+  .osheet h3{font-size:17px;margin:2px 0 2px}
+  .osheet .desc{font-size:12.5px;color:var(--muted);margin:0 0 6px}
+  .preview{background:#f7f8fa;border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px;font-size:13px;line-height:1.5;white-space:pre-wrap;color:#1d2127;max-height:230px;overflow:auto}
+  .preview .pl{color:var(--accent);font-weight:600}
+  .selectrow{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
+  .field select{width:100%;font-size:15px;border:1px solid var(--line);border-radius:10px;padding:11px 12px;outline:none;background:#fff;-webkit-appearance:none;appearance:none}
+  .field textarea{width:100%;font-size:14px;border:1px solid var(--line);border-radius:10px;padding:11px 12px;outline:none;min-height:90px;font-family:inherit;resize:vertical}
 </style>
 </head>
 <body>
@@ -157,20 +205,41 @@
       <h1>Command Center</h1>
       <div class="date" id="date">—</div>
     </div>
-    <button class="syncbtn local" id="syncBtn" title="Sync"><span class="d"></span><span id="syncLbl">Local</span></button>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="syncbtn" id="tplBtn" title="Email templates">✉️&nbsp;Templates</button>
+      <button class="syncbtn local" id="syncBtn" title="Sync"><span class="d"></span><span id="syncLbl">Local</span></button>
+    </div>
   </header>
 
-  <div class="brief" id="brief"><div class="lab">Today</div><div id="briefText">Loading…</div></div>
+  <div id="tasksView">
+    <div class="brief" id="brief"><div class="lab">Today</div><div id="briefText">Loading…</div></div>
 
-  <div class="add">
-    <button class="prio" id="prioBtn" title="Priority">●</button>
-    <input id="addInput" placeholder="Add a task…  (try: Call vendor !high tmo)" autocomplete="off" />
-    <button class="go" id="addBtn">+</button>
+    <div class="add">
+      <button class="prio" id="prioBtn" title="Priority">●</button>
+      <input id="addInput" placeholder="Add a task…  (try: Call vendor !high tmo)" autocomplete="off" />
+      <button class="go" id="addBtn">+</button>
+    </div>
+    <div class="hint">Tip: end with <b>tod</b>/<b>tmrw</b>/<b>mon…sun</b> or <b>6/14</b> for a due date, and <b>!high</b> / <b>!med</b> for priority.</div>
+
+    <div class="tabs" id="tabs"></div>
+    <div class="list" id="list"></div>
   </div>
-  <div class="hint">Tip: end with <b>tod</b>/<b>tmrw</b>/<b>mon…sun</b> or <b>6/14</b> for a due date, and <b>!high</b> / <b>!med</b> for priority.</div>
 
-  <div class="tabs" id="tabs"></div>
-  <div class="list" id="list"></div>
+  <div id="ordersView" style="display:none">
+    <div class="pagehead">
+      <div><h2>Orders &amp; requests</h2><div class="sub" id="ordSub">Track what you've requested and where it stands.</div></div>
+      <button class="newbtn" id="newOrderBtn">+ New</button>
+    </div>
+    <div id="ordersList"></div>
+  </div>
+
+  <div id="templatesView" style="display:none">
+    <div class="pagehead">
+      <div><h2>Email templates</h2><div class="sub">Pick one, fill the blanks, copy or open in mail.</div></div>
+      <button class="newbtn ghost" id="newTplBtn">+ New</button>
+    </div>
+    <div id="templatesList"></div>
+  </div>
 
   <section class="live" id="liveWrap" style="display:none">
     <h3>Live feeds — desktop</h3>
@@ -187,10 +256,15 @@
   <button data-v="today"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5z"/></svg><span>Today</span></button>
   <button data-v="upcoming"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg><span>Upcoming</span></button>
   <button data-v="all"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg><span>All</span></button>
+  <button data-v="orders"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7M12 11v10"/></svg><span>Orders</span></button>
   <button data-v="done"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>Done</span></button>
 </nav>
 
 <button class="fab" id="fab" title="Settings">⚙</button>
+
+<!-- compose / form overlay -->
+<div class="ovl" id="ovl"></div>
+<div class="osheet" id="osheet"><div class="grip"></div><div id="osheetBody"></div></div>
 
 <!-- settings sheet -->
 <div class="sheet-bg" id="sheetBg"></div>
@@ -213,8 +287,12 @@
 "use strict";
 /* ============ state ============ */
 var SAVE_KEY = "jcc_tasks_v1";
-var GH_KEY = "jcc_gh_v1";
+var ORD_KEY  = "jcc_orders_v1";
+var TPL_KEY  = "jcc_tpl_v1";
+var GH_KEY   = "jcc_gh_v1";
 var TASKS = [];                 // {id,title,notes,due,priority,done,created,updated,deleted,source}
+var ORDERS = [];                // {id,customer,item,qty,status,notes,updated,created,deleted}
+var TEMPLATES = [];             // {id,name,icon,subject,body}
 var VIEW = "today";
 var PRIO = "med";
 var GH = loadGH();              // keys are defined above so this reads correctly
@@ -253,8 +331,15 @@ function b64encode(str){return btoa(unescape(encodeURIComponent(str)));}
 function b64decode(b64){return decodeURIComponent(escape(atob(b64)));}
 
 /* ============ storage ============ */
-function loadLocal(){try{TASKS=JSON.parse(localStorage.getItem(SAVE_KEY))||[];}catch(e){TASKS=[];}}
-function saveLocal(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(TASKS));}catch(e){}}
+function loadLocal(){
+  try{TASKS=JSON.parse(localStorage.getItem(SAVE_KEY))||[];}catch(e){TASKS=[];}
+  try{ORDERS=JSON.parse(localStorage.getItem(ORD_KEY))||[];}catch(e){ORDERS=[];}
+  loadTemplates();
+}
+function saveLocal(){
+  try{localStorage.setItem(SAVE_KEY,JSON.stringify(TASKS));}catch(e){}
+  try{localStorage.setItem(ORD_KEY,JSON.stringify(ORDERS));}catch(e){}
+}
 function loadGH(){try{return JSON.parse(localStorage.getItem(GH_KEY))||null;}catch(e){return null;}}
 function saveGH(g){GH=g;localStorage.setItem(GH_KEY,JSON.stringify(g));}
 
@@ -287,16 +372,17 @@ async function pullRemote(){
   if(!r.ok) throw new Error("pull "+r.status);
   var j=await r.json();
   REMOTE_SHA=j.sha;
-  try{return JSON.parse(b64decode(j.content)).tasks||[];}catch(e){return [];}
+  try{var d=JSON.parse(b64decode(j.content)); return {tasks:d.tasks||[], orders:d.orders||[]};}catch(e){return {tasks:[],orders:[]};}
 }
+function remotePayload(){return b64encode(JSON.stringify({tasks:TASKS,orders:ORDERS,updated:nowISO()},null,2));}
 async function pushRemote(){
   if(!GH) return;
-  var body={message:"Update tasks "+new Date().toISOString(),content:b64encode(JSON.stringify({tasks:TASKS,updated:nowISO()},null,2)),branch:GH.branch||"main"};
+  var body={message:"Update "+new Date().toISOString(),content:remotePayload(),branch:GH.branch||"main"};
   if(REMOTE_SHA) body.sha=REMOTE_SHA;
   var r=await fetch(ghURL(),{method:"PUT",headers:ghHeaders(),body:JSON.stringify(body)});
   if(r.status===409){ // sha conflict: re-pull, merge, retry once
-    var remote=await pullRemote(); TASKS=mergeTasks(TASKS,remote); saveLocal();
-    body.content=b64encode(JSON.stringify({tasks:TASKS,updated:nowISO()},null,2)); body.sha=REMOTE_SHA;
+    var remote=await pullRemote(); TASKS=mergeTasks(TASKS,remote.tasks); ORDERS=mergeTasks(ORDERS,remote.orders); saveLocal();
+    body.content=remotePayload(); body.sha=REMOTE_SHA;
     r=await fetch(ghURL(),{method:"PUT",headers:ghHeaders(),body:JSON.stringify(body)});
   }
   if(!r.ok) throw new Error("push "+r.status);
@@ -307,7 +393,7 @@ async function fullSync(){
   try{
     setSync("busy","Syncing…");
     var remote=await pullRemote();
-    TASKS=mergeTasks(TASKS,remote); saveLocal(); render();
+    TASKS=mergeTasks(TASKS,remote.tasks); ORDERS=mergeTasks(ORDERS,remote.orders); saveLocal(); render();
     await pushRemote();
     setSync("ok","Synced");
     document.getElementById("syncInfo").textContent="Connected to "+GH.owner+"/"+GH.repo+" · "+GH.path;
@@ -444,7 +530,17 @@ function bindNav(){
     b.onclick=function(){ VIEW=b.getAttribute("data-v"); window.scrollTo({top:0,behavior:"smooth"}); render(); };
   });
 }
-function render(){renderTabs();renderNav();renderList();renderBrief();}
+function render(){
+  renderNav();
+  var isOrders=VIEW==="orders", isTpl=VIEW==="templates";
+  document.getElementById("tasksView").style.display=(isOrders||isTpl)?"none":"block";
+  document.getElementById("ordersView").style.display=isOrders?"block":"none";
+  document.getElementById("templatesView").style.display=isTpl?"block":"none";
+  var tb=document.getElementById("tplBtn"); if(tb) tb.style.background=isTpl?"var(--accent)":"", tb.style.color=isTpl?"#fff":"";
+  if(isOrders){ renderOrders(); }
+  else if(isTpl){ renderTemplates(); }
+  else { renderTabs(); renderList(); renderBrief(); }
+}
 
 /* ============ live panels (Cowork desktop only) ============ */
 async function callMcp(name,args){
@@ -505,6 +601,139 @@ function saveSheet(){
   else{closeSheet();}
 }
 
+/* ============ overlay sheet ============ */
+function openOvl(html){ document.getElementById("osheetBody").innerHTML=html; document.getElementById("ovl").classList.add("open"); document.getElementById("osheet").classList.add("open"); document.getElementById("osheet").scrollTop=0; }
+function closeOvl(){ document.getElementById("ovl").classList.remove("open"); document.getElementById("osheet").classList.remove("open"); }
+
+/* ============ orders ============ */
+var ORDER_STATUSES=["New","Submitted","Confirmed","Shipped","Done"];
+function activeOrders(){return ORDERS.filter(function(o){return !o.deleted;});}
+function findOrder(id){for(var i=0;i<ORDERS.length;i++)if(ORDERS[i].id===id)return ORDERS[i];return null;}
+function renderOrders(){
+  var el=document.getElementById("ordersList"), list=activeOrders();
+  var rank={New:0,Submitted:1,Confirmed:2,Shipped:3,Done:5};
+  list.sort(function(a,b){ var ra=rank[a.status]==null?4:rank[a.status], rb=rank[b.status]==null?4:rank[b.status]; if(ra!==rb)return ra-rb; return new Date(b.updated||0)-new Date(a.updated||0); });
+  document.getElementById("ordSub").textContent=list.length?(list.filter(function(o){return o.status!=="Done";}).length+" open · "+list.length+" total"):"Track what you've requested and where it stands.";
+  if(!list.length){ el.innerHTML="<div class='empty'><span class='big'>📦</span>No orders yet — tap + New to add one.</div>"; return; }
+  el.innerHTML="";
+  list.forEach(function(o){
+    var st=o.status||"New";
+    el.insertAdjacentHTML("beforeend",
+      "<div class='ocard'><div class='top'>"
+      +"<div style='min-width:0'><div class='cust'>"+esc(o.customer||"(no name)")+"</div>"
+      +(o.item?"<div class='item'>"+esc(o.item)+"</div>":"")+"</div>"
+      +"<button class='x' data-x='"+o.id+"'>×</button></div>"
+      +(o.notes?"<div class='nts'>"+esc(o.notes)+"</div>":"")
+      +"<div class='row2'>"
+      +"<button class='ostat "+st+"' data-adv='"+o.id+"' title='Tap to advance'>"+st+"</button>"
+      +(o.qty?"<span class='qty'>× "+esc(o.qty)+"</span>":"")
+      +"<button class='adv' data-edit='"+o.id+"'>Edit</button>"
+      +"</div></div>");
+  });
+  Array.prototype.forEach.call(el.querySelectorAll("[data-x]"),function(b){b.onclick=function(){delOrder(b.getAttribute("data-x"));};});
+  Array.prototype.forEach.call(el.querySelectorAll("[data-adv]"),function(b){b.onclick=function(){advOrder(b.getAttribute("data-adv"));};});
+  Array.prototype.forEach.call(el.querySelectorAll("[data-edit]"),function(b){b.onclick=function(){orderForm(findOrder(b.getAttribute("data-edit")));};});
+}
+function advOrder(id){var o=findOrder(id);if(!o)return;var i=ORDER_STATUSES.indexOf(o.status||"New");o.status=ORDER_STATUSES[(i+1)%ORDER_STATUSES.length];o.updated=nowISO();render();schedulePush();}
+function delOrder(id){var o=findOrder(id);if(!o)return;o.deleted=true;o.updated=nowISO();render();schedulePush();}
+function orderForm(o){
+  o=o||null; var v=function(x){return o&&o[x]?esc(o[x]):"";};
+  var opts=ORDER_STATUSES.map(function(s){return "<option"+((o&&o.status===s)?" selected":"")+">"+s+"</option>";}).join("");
+  openOvl(
+   "<h3>"+(o?"Edit order":"New order")+"</h3>"
+   +"<div class='field'><label>Customer / requester</label><input id='of_cust' value=\""+v("customer")+"\" autocomplete='off'></div>"
+   +"<div class='field'><label>Item / product</label><input id='of_item' value=\""+v("item")+"\" autocomplete='off'></div>"
+   +"<div class='field'><label>Quantity</label><input id='of_qty' value=\""+v("qty")+"\" autocomplete='off'></div>"
+   +"<div class='field'><label>Status</label><select id='of_status'>"+opts+"</select></div>"
+   +"<div class='field'><label>Notes</label><textarea id='of_notes'>"+(o&&o.notes?esc(o.notes):"")+"</textarea></div>"
+   +"<div class='actions'><button class='btn ghost' id='of_cancel'>Cancel</button><button class='btn primary' id='of_save'>Save</button></div>"
+  );
+  document.getElementById("of_cancel").onclick=closeOvl;
+  document.getElementById("of_save").onclick=function(){
+    var cust=document.getElementById("of_cust").value.trim(); if(!cust){closeOvl();return;}
+    if(o){ o.customer=cust;o.item=document.getElementById("of_item").value.trim();o.qty=document.getElementById("of_qty").value.trim();o.status=document.getElementById("of_status").value;o.notes=document.getElementById("of_notes").value.trim();o.updated=nowISO(); }
+    else { ORDERS.push({id:uid(),customer:cust,item:document.getElementById("of_item").value.trim(),qty:document.getElementById("of_qty").value.trim(),status:document.getElementById("of_status").value,notes:document.getElementById("of_notes").value.trim(),created:nowISO(),updated:nowISO(),deleted:false}); }
+    closeOvl();render();schedulePush();
+  };
+}
+
+/* ============ templates ============ */
+var SIGN="\n\nBest,\nJosh\n\nJosh Register, MBA\nSr. Manager, ENT Medical Education | Medtronic ENT";
+var DEFAULT_TEMPLATES=[
+  {id:"tpl-lab",icon:"🗓️",name:"Lab date confirmation",subject:"Confirming {{Course}} — {{Date}} at {{Site}}",
+   body:"Hi {{Name}},\n\nConfirming our {{Course}} on {{Date}} at {{Site}}. We're all set on our end and looking forward to it.\n\nA few logistics:\n• Start time: {{Start Time}}\n• Stations / specimens: {{Stations}}\n• On-site contact: {{Contact}}\n\nCould you confirm this works on your side and flag anything you still need from me?"+SIGN},
+  {id:"tpl-training",icon:"🎓",name:"Training invitation",subject:"Invitation: {{Product}} training — {{Date}}",
+   body:"Hi {{Name}},\n\nI'd like to invite you to a {{Product}} training session on {{Date}} ({{Time}}, {{Location}}).\n\nWe'll cover:\n• {{Topic 1}}\n• {{Topic 2}}\n\nIt should run about {{Duration}}. Are you able to join? I'll send a calendar hold once you confirm."+SIGN},
+  {id:"tpl-logistics",icon:"📦",name:"Event logistics / shipment",subject:"{{Event}} logistics — shipment & setup for {{Date}}",
+   body:"Hi {{Name}},\n\nLocking in logistics for {{Event}} on {{Date}} at {{Location}}.\n\nShipment:\n• Items: {{Items}}\n• Ship to: {{Ship To}}\n• Needed on-site by: {{Arrive By}}\n• Tracking / FedEx: {{Tracking}}\n\nCan you confirm the above and let me know who's receiving on-site? Thanks for helping pull this together."+SIGN},
+  {id:"tpl-followup",icon:"🤝",name:"KOL / customer follow-up",subject:"Great connecting at {{Event}} — next steps",
+   body:"Hi {{Name}},\n\nReally enjoyed connecting at {{Event}} — thank you for the time and the conversation about {{Topic}}.\n\nAs a next step, I'd love to {{Next Step}}. Would {{Proposed Date}} work for a quick follow-up?\n\nLet me know what works and I'll set it up."+SIGN},
+  {id:"tpl-veeva",icon:"✅",name:"Veeva approval follow-up",subject:"Quick approval needed: {{Piece}} ({{Veeva ID}})",
+   body:"Hi {{Name}},\n\nWhen you have a moment, could you review and approve {{Piece}} in Veeva? It's tagged to you under {{Veeva ID}}.\n\nWe're aiming to have it approved by {{Deadline}} to stay on track for {{Use Case}}. Happy to jump on a quick call if anything needs adjusting."+SIGN},
+  {id:"tpl-status",icon:"🔎",name:"Vendor / model status check",subject:"Status check: {{Item}} ({{Reference}})",
+   body:"Hi {{Name}},\n\nCould you give me a quick status update on {{Item}} (ref {{Reference}})? I want to make sure we're on track for {{Needed For}} on {{Date}}.\n\nSpecifically:\n• Current status:\n• Expected ship / ready date:\n• Anything you need from me:\n\nAppreciate the help — thank you!"+SIGN}
+];
+function loadTemplates(){
+  var custom={}; try{custom=JSON.parse(localStorage.getItem(TPL_KEY))||{};}catch(e){custom={};}
+  var byId={}; DEFAULT_TEMPLATES.forEach(function(t){byId[t.id]=t;});
+  Object.keys(custom).forEach(function(k){ byId[k]=custom[k]; });
+  TEMPLATES=Object.keys(byId).map(function(k){return byId[k];}).filter(function(t){return t&&!t.deleted;});
+}
+function saveTemplate(tpl){ var c={}; try{c=JSON.parse(localStorage.getItem(TPL_KEY))||{};}catch(e){} c[tpl.id]=tpl; try{localStorage.setItem(TPL_KEY,JSON.stringify(c));}catch(e){} loadTemplates(); }
+function deleteTemplate(id){ var c={}; try{c=JSON.parse(localStorage.getItem(TPL_KEY))||{};}catch(e){} c[id]={id:id,deleted:true}; try{localStorage.setItem(TPL_KEY,JSON.stringify(c));}catch(e){} loadTemplates(); }
+function tplById(id){for(var i=0;i<TEMPLATES.length;i++)if(TEMPLATES[i].id===id)return TEMPLATES[i];return null;}
+function placeholders(t){ var set=[],re=/\{\{([^}]+)\}\}/g,m,all=(t.subject||"")+" "+(t.body||""); while(m=re.exec(all)){ var k=m[1].trim(); if(set.indexOf(k)<0)set.push(k); } return set; }
+function fillTemplate(str,vals){ return (str||"").replace(/\{\{([^}]+)\}\}/g,function(_,k){ var v=vals[k.trim()]; return (v&&v.length)?v:("{{"+k.trim()+"}}"); }); }
+function renderTemplates(){
+  var el=document.getElementById("templatesList"); el.innerHTML="";
+  TEMPLATES.forEach(function(t){
+    el.insertAdjacentHTML("beforeend",
+      "<div class='tplcard' data-t='"+t.id+"'><div class='ic'>"+(t.icon||"✉️")+"</div>"
+      +"<div style='min-width:0'><div class='tt'>"+esc(t.name)+"</div><div class='pv'>"+esc(t.subject)+"</div></div>"
+      +"<div class='chev'>›</div></div>");
+  });
+  Array.prototype.forEach.call(el.querySelectorAll(".tplcard"),function(c){ c.onclick=function(){compose(c.getAttribute("data-t"));}; });
+}
+function copyText(txt){ if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).catch(function(){fallbackCopy(txt);});} else fallbackCopy(txt); }
+function fallbackCopy(txt){ var ta=document.createElement("textarea"); ta.value=txt; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(e){} document.body.removeChild(ta); }
+function compose(id){
+  var t=tplById(id); if(!t)return;
+  var fields=placeholders(t).map(function(p){ return "<div class='field'><label>"+esc(p)+"</label><input class='ph' data-k=\""+esc(p)+"\" autocomplete='off'></div>"; }).join("");
+  openOvl(
+    "<h3>"+esc(t.name)+"</h3><div class='desc'>Fill the blanks, then copy or open in your mail app.</div>"
+    +"<div class='field'><label>To (email)</label><input id='cmp_to' type='email' autocomplete='off' placeholder='name@example.com'></div>"
+    +fields
+    +"<div class='preview' id='cmp_prev'></div>"
+    +"<div class='actions'><button class='btn ghost' id='cmp_copy'>Copy email</button><button class='btn primary' id='cmp_mail'>Open in Mail</button></div>"
+    +"<div class='ssub'><button class='adv' id='cmp_edit'>Edit this template</button></div>"
+  );
+  function vals(){ var v={}; Array.prototype.forEach.call(document.querySelectorAll("#osheetBody .ph"),function(inp){ v[inp.getAttribute("data-k")]=inp.value.trim(); }); return v; }
+  function refresh(){ var v=vals(), subj=fillTemplate(t.subject,v), body=fillTemplate(t.body,v); var html=esc("Subject: "+subj+"\n\n"+body).replace(/\{\{[^}]+\}\}/g,function(m){return "<span class='pl'>"+m+"</span>";}); document.getElementById("cmp_prev").innerHTML=html; }
+  Array.prototype.forEach.call(document.querySelectorAll("#osheetBody .ph"),function(inp){ inp.addEventListener("input",refresh); });
+  refresh();
+  document.getElementById("cmp_copy").onclick=function(){ var v=vals(), txt="Subject: "+fillTemplate(t.subject,v)+"\n\n"+fillTemplate(t.body,v); copyText(txt); var b=document.getElementById("cmp_copy"); b.textContent="Copied ✓"; setTimeout(function(){b.textContent="Copy email";},1400); };
+  document.getElementById("cmp_mail").onclick=function(){ var v=vals(), to=(document.getElementById("cmp_to").value||"").trim(); window.location.href="mailto:"+encodeURIComponent(to)+"?subject="+encodeURIComponent(fillTemplate(t.subject,v))+"&body="+encodeURIComponent(fillTemplate(t.body,v)); };
+  document.getElementById("cmp_edit").onclick=function(){ templateForm(t); };
+}
+function templateForm(t){
+  t=t||null; var isNew=!t;
+  openOvl(
+    "<h3>"+(isNew?"New template":"Edit template")+"</h3><div class='desc'>Use {{Field Name}} for blanks you fill in each time.</div>"
+    +"<div class='field'><label>Name</label><input id='tf_name' value=\""+(t?esc(t.name):"")+"\" autocomplete='off'></div>"
+    +"<div class='field'><label>Icon (emoji)</label><input id='tf_icon' value=\""+(t?esc(t.icon||"✉️"):"✉️")+"\" autocomplete='off'></div>"
+    +"<div class='field'><label>Subject</label><input id='tf_subject' value=\""+(t?esc(t.subject):"")+"\" autocomplete='off'></div>"
+    +"<div class='field'><label>Body</label><textarea id='tf_body' style='min-height:170px'>"+(t?esc(t.body):"")+"</textarea></div>"
+    +"<div class='actions'>"+(t?"<button class='btn ghost' id='tf_del'>Delete</button>":"")+"<button class='btn ghost' id='tf_cancel'>Cancel</button><button class='btn primary' id='tf_save'>Save</button></div>"
+  );
+  document.getElementById("tf_cancel").onclick=function(){ if(t) compose(t.id); else closeOvl(); };
+  var del=document.getElementById("tf_del"); if(del) del.onclick=function(){ deleteTemplate(t.id); closeOvl(); render(); };
+  document.getElementById("tf_save").onclick=function(){
+    var name=document.getElementById("tf_name").value.trim(); if(!name)return;
+    saveTemplate({id:(t?t.id:"tpl-"+uid()),name:name,icon:document.getElementById("tf_icon").value.trim()||"✉️",subject:document.getElementById("tf_subject").value.trim(),body:document.getElementById("tf_body").value});
+    closeOvl(); render();
+  };
+}
+
 /* ============ boot ============ */
 (function(){
   document.getElementById("date").textContent=new Date().toLocaleDateString([], {weekday:"long",month:"long",day:"numeric"});
@@ -523,6 +752,10 @@ function saveSheet(){
   document.getElementById("closeSheet").onclick=closeSheet;
   document.getElementById("sheetBg").onclick=closeSheet;
   document.getElementById("saveSheet").onclick=saveSheet;
+  document.getElementById("tplBtn").onclick=function(){VIEW="templates";window.scrollTo({top:0});render();};
+  document.getElementById("newOrderBtn").onclick=function(){orderForm(null);};
+  document.getElementById("newTplBtn").onclick=function(){templateForm(null);};
+  document.getElementById("ovl").onclick=closeOvl;
   bindNav();
 
   render();
