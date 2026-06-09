@@ -861,6 +861,36 @@ function renderPlan(){
   var sp=document.getElementById("splash");
   if(sp){ setTimeout(function(){sp.classList.add("hide");},700); setTimeout(function(){if(sp&&sp.parentNode)sp.parentNode.removeChild(sp);},1200); }
 })();
+
+// ── FY27 Career Milestones Timeline ───────────────────────────────────────────
+(function(){
+  var MS_Q={s1:'Q1',s3:'Q1',o1:'Q1',f1:'Q1',f3:'Q1',s2:'Q2',o2:'Q2',o3:'Q2',l1:'Q2',l2:'Q2',f2:'Q2',l3:'Q3',u1:'Q3',u2:'Q4',u3:'LT'};
+  var Q_LBL={Q1:'Q1 FY27|May – Jul 2026',Q2:'Q2 FY27|Aug – Oct 2026',Q3:'Q3 FY27|Nov 2026 – Jan 2027',Q4:'Q4 FY27|Feb – Apr 2027',LT:'Long Term|FY28+'};
+  var Q_TXT={Q1:'Build the systems. Cut the noise.',Q2:'Show up strategic. Own the launches.',Q3:'Document the shift. Build the narrative.',Q4:'Make the Director case.',LT:'Sustain and grow influence.'};
+  var TK='jcc_timeline_v1';
+  function patchFn(){
+    if(typeof careerHTML!=='function'||typeof DIRECTOR_PLAN==='undefined')return;
+    var _o=careerHTML;
+    window.careerHTML=function(){
+      if(localStorage.getItem(TK)!=='1')return'<div style="text-align:center;padding:12px 0 20px"><button onclick="localStorage.setItem(\''+TK+'\',\'1\');renderPlan();" style="background:#2563eb;color:#fff;border:none;padding:8px 20px;border-radius:20px;font-size:13px;cursor:pointer;font-weight:600;">📅 View FY27 Milestones Timeline</button></div>'+_o();
+      var ch=PLAN.checks||{},ms=[],byQ={Q1:[],Q2:[],Q3:[],Q4:[],LT:[]};
+      DIRECTOR_PLAN.areas.forEach(function(a){a.ms.forEach(function(m){ms.push({id:m[0],text:m[1],icon:a.icon});});});
+      ms.forEach(function(m){byQ[MS_Q[m.id]||'LT'].push(m);});
+      var dn=ms.filter(function(m){return ch[m.id];}).length,pct=Math.round(dn/ms.length*100);
+      var h='<div style="padding:0 0 20px"><div style="background:linear-gradient(135deg,#1e3a5f,#0f2444);border-radius:16px;padding:20px 24px;margin-bottom:20px;color:#fff"><div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:#7eb3f5;margin-bottom:4px">CAREER TIMELINE</div><div style="font-size:20px;font-weight:700;margin-bottom:2px">Sr. Manager → Director</div><div style="font-size:13px;color:#93c5fd;margin-bottom:16px">FY27 Roadmap + Long Term</div><div style="background:rgba(255,255,255,.15);border-radius:6px;height:6px;overflow:hidden"><div style="background:#3b82f6;height:6px;width:\'+pct+\'%;border-radius:6px"></div></div><div style="font-size:12px;color:#bfdbfe;margin-top:6px">\'+dn+\' of \'+ms.length+\' milestones \u00b7 \'+pct+\'%</div></div><button onclick="localStorage.setItem(\'\'+TK+\'\',\'0\');renderPlan();" style="background:transparent;border:1px solid #d1d5db;color:#4b5563;padding:6px 16px;border-radius:16px;font-size:12px;cursor:pointer;margin-bottom:16px">← Back to checklist view</button>';
+      ['Q1','Q2','Q3','Q4','LT'].forEach(function(q){
+        var ml=byQ[q],qd=ml.filter(function(m){return ch[m.id];}).length,p=Q_LBL[q].split('|');
+        h+='<div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;margin-bottom:14px;overflow:hidden"><div style="background:'+(q==='LT'?'#f5f3ff':'#eff6ff')+';padding:14px 18px;display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-size:13px;font-weight:700;color:'+(q==='LT'?'#6d28d9':'#1d4ed8')+'">'+p[0]+'</div><div style="font-size:11px;color:#6b7280;margin-top:2px">'+p[1]+'</div><div style="font-size:11px;color:#9ca3af;margin-top:3px">'+Q_TXT[q]+'</div></div><div style="font-size:12px;font-weight:600;color:'+(qd===ml.length&&ml.length>0?'#16a34a':'#6b7280')+';white-space:nowrap;margin-left:12px">'+qd+'/'+ml.length+'</div></div><div style="padding:12px 18px">';
+        ml.forEach(function(m){var d=!!ch[m.id];h+='<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6;cursor:pointer" onclick="togglePlan(\''+m.id+'\')">'+'<div style="width:20px;height:20px;min-width:20px;border-radius:50%;border:2px solid '+(d?'#2563eb':'#d1d5db')+';background:'+(d?'#2563eb':'transparent')+';display:flex;align-items:center;justify-content:center;margin-top:1px">'+(d?'<svg width="12" height="12" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>':'')+'</div><div style="font-size:13px;color:'+(d?'#9ca3af':'#111827')+';'+(d?'text-decoration:line-through;':'')+';line-height:1.4">'+m.icon+' '+m.text+'</div></div>';});
+        h+='</div></div>';
+      });
+      return h+'</div>';
+    };
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',patchFn);
+  else setTimeout(patchFn,200);
+})();
+// ────────────────────────────────────────────────────────────────────────────
 </script>
 </body>
 </html>
