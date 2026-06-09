@@ -1,5 +1,5 @@
 /* Josh Command Center — service worker (offline shell) */
-const CACHE = "jcc-v2";
+const CACHE = "jcc-v6";
 const ASSETS = [
   "./",
   "./index.html",
